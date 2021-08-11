@@ -121,20 +121,22 @@ def run_main(input_file):
     copyright_dict = defaultdict(str)
     #song_titles1 = []
     song_titles = []
-    #breaks_code = ["I'M TOO SEXY", 'HUMBLE AND KIND (TIM MCGRAW MA', 'HOLIDAY (SSH)', "CAN'T YOU SEE (U.S. ONLY AS OF)", "HIGHWAY DON'T CARE (TIM MCGRAW", '25 OR 6 TO 4 (GOARMY REMIX)', 'DANCE HALL DAYS (WANG CHUNG RE', 'SHOTGUN RIDER (TIM MCGRAW MAST', 'SHOTGUN RIDER (TIM MCGRAW MAST', 'BAREFOOT BLUE JEAN NIGHT (BMI']
-    breaks_code = ["I'M TOO SEXY", 'HUMBLE AND KIND (TIM MCGRAW MA', "HIGHWAY DON'T CARE (TIM MCGRAW", 'HOLIDAY (SSH)', 'BODY', 'LET MY LOVE OPEN THE DOOR', "WON'T GET FOOLED AGAIN", 'LOOK WHAT YOU MADE ME DO', '25 OR 6 TO 4 (GOARMY REMIX)', 'DANCE HALL DAYS (WANG CHUNG RE', 'SHOTGUN RIDER (TIM MCGRAW MAST']
-    
+    #breaks_code = ['HUMBLE AND KIND (TIM MCGRAW MA', 'HOLIDAY (SSH)', "CAN'T YOU SEE (U.S. ONLY AS OF)", "HIGHWAY DON'T CARE (TIM MCGRAW", '25 OR 6 TO 4 (GOARMY REMIX)', 'DANCE HALL DAYS (WANG CHUNG RE', 'SHOTGUN RIDER (TIM MCGRAW MAST', 'SHOTGUN RIDER (TIM MCGRAW MAST', 'BAREFOOT BLUE JEAN NIGHT (BMI']
+    #breaks_code = ['HUMBLE AND KIND (TIM MCGRAW MA', "HIGHWAY DON'T CARE (TIM MCGRAW", 'HOLIDAY (SSH)', 'BODY', 'LET MY LOVE OPEN THE DOOR', "WON'T GET FOOLED AGAIN", 'LOOK WHAT YOU MADE ME DO', '25 OR 6 TO 4 (GOARMY REMIX)', 'DANCE HALL DAYS (WANG CHUNG RE', 'SHOTGUN RIDER (TIM MCGRAW MAST']
+    ignore = ['LET MY LOVE OPEN THE DOOR', "WON'T GET FOOLED AGAIN", 'LOOK WHAT YOU MADE ME DO']
+
     for index, row in dataframe1.iterrows():
-        if row[2].split("-")[1] in breaks_code:
+        if row[2].split("-")[1] in ignore:
+        #if len(row[2].split("-")[1].split("(")[0]) == 1: # single word case
             continue
         else:
             #if "(" in row[2]:
             #    first_half = row[2].split("(")[0]
             #    song_titles.append((first_half.split("-"))[1])
             #else:
-            row_item = row[2].replace("(", "")
+            #row_item = row[2].replace("(", "")
             #    song_titles.append((row[2]).split("-")[1])
-            song_titles.append((index+1,row_item))
+            song_titles.append((index+1,row[2]))
 
     PATH = "/Users/xiaoyanyang/Desktop/chromedriver"
     driver = webdriver.Chrome(PATH)
@@ -182,6 +184,8 @@ def run_main(input_file):
 
         search_term = search_term.split("(")[0]
             
+        if len(search_term.split(" ")) == 1:
+            continue
         #print("\nsearch_term: ", search_term, "\n")
 
         search = driver.find_element_by_name("Search_Arg")

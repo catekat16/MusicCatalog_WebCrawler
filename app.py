@@ -29,9 +29,9 @@ st.write('You selected `%s`' % filename)
 [(seconds_elapsed, average_seconds),[num_recorded, total_num_items, accuracy, match]] = run_main(filename) # [(seconds_elapsed, average_seconds),output_info]
 
 st.write('Check out the output file!')
-#st.write('Accounting for `%s`' % num_recorded 'songs out of `%s`' % len(copyright_dict))
+#st.write('Accounting for `%s` songs out of `%x`' % (num_recorded, total_num_items))
 st.write('Percentage match against manually inputted file: `%s`' % accuracy)
-#st.write('`%s`' % match 'matches out of `%s`' % num_recorded)
+#st.write('`%s` matches out of `%x`' % (match, num_recorded))
 
 
 st.write('Total time elapsed (in seconds):`%s`' % seconds_elapsed)
