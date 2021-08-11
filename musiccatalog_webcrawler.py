@@ -103,17 +103,21 @@ def create_output(copyright_dict, outputfile_name, accuracy_check=False):
             num_recorded += 1
 
     wb.save(outputfile_name + '.xlsx')
-    accuracy = match/num_recorded * 100
+    if accuracy_check:
+        accuracy = match/num_recorded * 100
+    total_num_items = len(copyright_dict)
     print("\nCheck out the output file!")
     print("Accounting for", num_recorded, "songs out of", len(copyright_dict))
     print("Match against manually inputted file is: ", accuracy, "%")
     print(match, " matches out of ", num_recorded, " registration numbers recorded")
+    return [num_recorded, total_num_items, accuracy, match]
 
-if __name__ == "__main__":
+def run_main(input_file):
 
     start_time = time.time()
     require_cols = [2, 2]
-    dataframe1 = pd.read_excel('/Users/xiaoyanyang/Desktop/MusicCatalog_WebCrawler/input_Song_Titles.xlsx', engine = 'openpyxl', usecols = require_cols, skiprows = 2, header = None).head(-142)
+    dataframe1 = pd.read_excel(input_file, engine = 'openpyxl', usecols = require_cols, skiprows = 2, header = None).head(-142) 
+    #dataframe1 = pd.read_excel('/Users/xiaoyanyang/Desktop/MusicCatalog_WebCrawler/input_Song_Titles.xlsx', engine = 'openpyxl', usecols = require_cols, skiprows = 2, header = None).head(-142)
     copyright_dict = defaultdict(str)
     #song_titles1 = []
     song_titles = []
@@ -276,11 +280,12 @@ if __name__ == "__main__":
     #print(copyright_dict) 
     #print("copyright_dict: ", copyright_dict)
     
-    create_output(copyright_dict, "Registration Numbers", True)
+    output_info = create_output(copyright_dict, "Registration Numbers", True)
     seconds_elapsed = time.time() - start_time
     print("Total time elapsed (in minutes): ", seconds_elapsed/60)
-    print("Average time taken for each song (in seconds): ", seconds_elapsed/len(copyright_dict))
-
+    average_seconds = seconds_elapsed/len(copyright_dict)
+    print("Average time taken for each song (in seconds): ", average_seconds)
+    return [(seconds_elapsed, average_seconds),output_info]
 # next steps: 
 # yup --> - paste to excel file (just take first element of list)
 # - use more complete information of excel sheet (catalog name, artist name, date)
