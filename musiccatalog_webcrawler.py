@@ -15,46 +15,122 @@ from openpyxl.styles import Font
 
 
 def check_master(song_title, index_check=False):
-    substrings = ['Master','Mast']
+    substrings = ['Master','Mast', 'ssh', 'bmi']
     if not index_check:
         return any([substring.lower() in song_title.lower() for substring in substrings])
     else:
         return max([song_title.lower().find(substring.lower()) for substring in substrings])
 
-def create_output(copyright_dict, name):
+def format_copynum(song_title):
+    string1 = song_title
+    string1 = string1.split("-")
+    string_list = []
+    for string in string1:
+        string_list.append(string.split(" "))
+
+    flatten_list = sum(string_list, [])
+
+    length = 0
+    for i in range(len(flatten_list)):
+        length += len(flatten_list[i])
+
+    song_name = ""
+
+    for index in range(len(flatten_list)):
+        if index == 0:
+            song_name += flatten_list[index]
+            for j in range(12-length):
+                song_name += "0"
+            continue
+        song_name += flatten_list[index]
+        
+    return song_name
+
+def create_check_dict(testfile_name): 
+    require_cols = [2, 3]
+
+    dataframe2 = pd.read_excel(testfile_name + '.xlsx', engine = 'openpyxl', usecols = require_cols, skiprows = 2, header = None).head(-142)
+    dataframe2 = dataframe2.fillna("")
+    
+    song_titles = []
+    check_dict = defaultdict(str)
+
+    for index, row in dataframe2.iterrows():
+        copy_num = format_copynum(row[3])
+        if copy_num[:2] in ["PA", "PAu", "PAU", "SR"]: 
+            #check_dict[(index+1,(row[2]).split("-")[1])] = copy_num
+            check_dict[(index+1,row[2])] = copy_num
+    return check_dict
+    
+def create_output(copyright_dict, outputfile_name, accuracy_check=False):
     wb =  Workbook()
     ws =  wb.active
     headings = ["#","Song","Registration #"]
     ws.append(headings)
     
+    if accuracy_check:
+        check_dict = create_check_dict("test_Song_Registration Information")
+        match = 0
+        #print("check_dict:", check_dict)
+    
+    num_recorded = 0
     for key in copyright_dict.keys():
         #char = get_column_letter(col)
         # easy mvp but need to store original row number and do something like ws[char + row_iter]
         row_num = key[0]
+        print("\nrow_num: ", row_num)
         song_title = key[1]
+        # want the original song title (in the case of MASTER version of 20th Century Boy and regular 20th Century Boy, for example)
         copy_num = copyright_dict[key]
+        #print(song_title, end="")
+        #print(copy_num)
+        #print("check_dict[row_num, song_title]: ", check_dict[(row_num,song_title)])
+        print("song_title: ", song_title)
+        if accuracy_check:
+            if check_dict[(row_num,song_title)] == " ":
+                print("non PA/SR number entry -- won't be factored into total accuracy count")
+                num_recorded -= 1
+            elif check_dict[(row_num,song_title)][:2] not in ["PA", "SR"]:
+                num_recorded -= 1
+            else:
+                print("copy_num: ", copy_num)
+                print("Manual entry (check_dict[row_num, song_title]) is: ", check_dict[(row_num,song_title)])
+                if check_dict[(row_num,song_title)].lower() == copy_num.lower():
+                    print("match!")
+                    match += 1
         ws.append([row_num, song_title, copy_num])
-    
-    wb.save(name + '.xlsx')
-    print("Check out the output file!")
+        if copy_num != " ":
+            num_recorded += 1
+
+    wb.save(outputfile_name + '.xlsx')
+    accuracy = match/num_recorded * 100
+    print("\nCheck out the output file!")
+    print("Accounting for", num_recorded, "songs out of", len(copyright_dict))
+    print("Match against manually inputted file is: ", accuracy, "%")
+    print(match, " matches out of ", num_recorded, " registration numbers recorded")
 
 if __name__ == "__main__":
 
+    start_time = time.time()
     require_cols = [2, 2]
     dataframe1 = pd.read_excel('/Users/xiaoyanyang/Desktop/MusicCatalog_WebCrawler/input_Song_Titles.xlsx', engine = 'openpyxl', usecols = require_cols, skiprows = 2, header = None).head(-142)
     copyright_dict = defaultdict(str)
-
+    #song_titles1 = []
     song_titles = []
     #breaks_code = ["I'M TOO SEXY", 'HUMBLE AND KIND (TIM MCGRAW MA', 'HOLIDAY (SSH)', "CAN'T YOU SEE (U.S. ONLY AS OF)", "HIGHWAY DON'T CARE (TIM MCGRAW", '25 OR 6 TO 4 (GOARMY REMIX)', 'DANCE HALL DAYS (WANG CHUNG RE', 'SHOTGUN RIDER (TIM MCGRAW MAST', 'SHOTGUN RIDER (TIM MCGRAW MAST', 'BAREFOOT BLUE JEAN NIGHT (BMI']
-    breaks_code = ["I'M TOO SEXY", 'LET MY LOVE OPEN THE DOOR', "CAN'T YOU SEE (U.S. ONLY AS OF)", "WON'T GET FOOLED AGAIN", "WON'T GET FOOLED AGAIN", 'LOOK WHAT YOU MADE ME DO']
+    breaks_code = ["I'M TOO SEXY", 'HUMBLE AND KIND (TIM MCGRAW MA', "HIGHWAY DON'T CARE (TIM MCGRAW", 'HOLIDAY (SSH)', 'BODY', 'LET MY LOVE OPEN THE DOOR', "WON'T GET FOOLED AGAIN", 'LOOK WHAT YOU MADE ME DO', '25 OR 6 TO 4 (GOARMY REMIX)', 'DANCE HALL DAYS (WANG CHUNG RE', 'SHOTGUN RIDER (TIM MCGRAW MAST']
     
     for index, row in dataframe1.iterrows():
-        if row[2].split("-")[1] not in breaks_code:
-            if "(" in row[2]:
-                first_half = row[2].split("(")[0]
-                song_titles.append((first_half.split("-"))[1])
-            else:
-                song_titles.append((row[2]).split("-")[1])
+        if row[2].split("-")[1] in breaks_code:
+            continue
+        else:
+            #if "(" in row[2]:
+            #    first_half = row[2].split("(")[0]
+            #    song_titles.append((first_half.split("-"))[1])
+            #else:
+            row_item = row[2].replace("(", "")
+            #    song_titles.append((row[2]).split("-")[1])
+            song_titles.append((index+1,row_item))
 
     PATH = "/Users/xiaoyanyang/Desktop/chromedriver"
     driver = webdriver.Chrome(PATH)
@@ -69,19 +145,44 @@ if __name__ == "__main__":
     #    first_half = row[2].split("(")[0]
     #    song_titles.append((first_half.split("-"))[1])
 
-    count = 0
+    #song_title = ["202775-HUMBLE AND KIND (TIM MCGRAW MA"]
+    #song_titles.append((6,song_title[0]))
+    
+    ######## TEST CASE #########
+    
+    #song_title = ["19819-20th Century Boy - Master"]
+    #song_titles.append((12,song_title[0]))
+    #if check_master(song_title[0]):
+    #    SR_master = True
+    #print(song_titles)
+    #print(SR_master)
+    
+    ############################
+    
+    registered_count = 0
     for i in range(len(song_titles)):
-        count += 1
-        song_title = song_titles[i]
+        SR_master = False
+        song_index = song_titles[i][0]
+        song_title = song_titles[i][1]
         if check_master(song_title):
-            end_index = check_master(song_title, True)
-            song_title = song_title[:end_index-1]
-        
+            SR_master = True
         # search_term can be song title + catalog (try different search terms)
         
+        search_term = song_title.split("-")[1]
+        #print("\nsearch_term after splitting for -: ", search_term, "\n")
+        if check_master(search_term): # gets rid of the phrase master, ssh, etc.
+            end_index = check_master(search_term, True)
+            search_term = search_term[:end_index-1]
+        if search_term[-1] == " ":
+            search_term = search_term[:-1]
+
+        search_term = search_term.split("(")[0]
+            
+        #print("\nsearch_term: ", search_term, "\n")
+
         search = driver.find_element_by_name("Search_Arg")
         search.clear()
-        search.send_keys(song_title + "\n")
+        search.send_keys(search_term + "\n")
 
         driver.implicitly_wait(0.5)
         
@@ -92,7 +193,15 @@ if __name__ == "__main__":
         except:
             table = driver.find_elements_by_xpath("//form/table[2]")
             
+        #try:
         num_cols = len(table[1].text.split(":"))
+        #except:
+            #search = driver.find_element_by_name("Search_Arg")
+            #search.clear()
+            #search_term = search_term.split("(")[0]
+            #search.send_keys(search_term + "\n")
+            #print("\nnew search_term: ", search_term, "\n")
+
         #print("number of cols is", num_cols)
         if num_cols == 2: # details page of single search result case
             row_item = table[2].text
@@ -121,31 +230,38 @@ if __name__ == "__main__":
             except:
                 table = driver.find_elements_by_xpath("//form/table[2]")
             num_rows = len(table)
+            #print("\nnum_rows: ", num_rows, "\n")
             for i in range(1,num_rows):
                 row_item = table[i].text #
                 copy_num = row_item.split(".")[-1].split(" ")[-2]
+                #print("\n\n\n\ncopy_num: " + copy_num + "\n\n\n\n")
                 song_info = row_item
-                if (song_title.lower() in song_info.lower()):
+                if (search_term.lower() in search_term.lower()):
                     date = row_item.split(".")[-1].split(" ")[-1]
-                    if check_master(song_title) and copy_num[:2] == "SR":
-                        # possibilities_list.append((copy_num, date)) 
-                        # instead of appending date, in better MVP would click into details page 
-                        #     and see whether catalog name is listed in authorship on application and append type of work 
-                        possibilities_list.append(copy_num)
+                    if SR_master:
+                        #print(SR_master)
+                        if copy_num[:2] == "SR":
+                            #print("\n\n\n\n------------SR case--------------\n\n\n\n")
+                            # possibilities_list.append((copy_num, date)) 
+                            # instead of appending date, in better MVP would click into details page 
+                            #     and see whether catalog name is listed in authorship on application and append type of work 
+                            possibilities_list.append(copy_num)
 
                     elif copy_num[:2] == "PA" and copy_num[:3] != "PAu": 
                         possibilities_list.append(copy_num) 
-        
-        print(count)
-        print(song_title)
-        print(possibilities_list, "\n")
 
         #{(song name, row num):copyright #} dictionary
         # in the excel file row num offset by +2
         if not possibilities_list:
-            copyright_dict[(count, song_title)] = " "
+            copyright_dict[(song_index, song_title)] = " "
         else:
-            copyright_dict[(count, song_title)] = possibilities_list[0]
+            registered_count += 1
+            copyright_dict[(song_index, song_title)] = possibilities_list[0]
+            #print("registered song")
+
+        print("Number of songs registered: ", registered_count)
+        print(song_title)
+        #print("\npossibilities_list: ", possibilities_list, "\n")
         
         try:
             search_toggle = driver.find_element_by_xpath("//center[2]/font/a[2]/img")
@@ -157,16 +273,20 @@ if __name__ == "__main__":
             back_tosearch.perform()
             
     driver.close()
-    print(copyright_dict) 
+    #print(copyright_dict) 
+    #print("copyright_dict: ", copyright_dict)
     
-    create_output(copyright_dict, "Registration Numbers")
+    create_output(copyright_dict, "Registration Numbers", True)
+    seconds_elapsed = time.time() - start_time
+    print("Total time elapsed (in minutes): ", seconds_elapsed/60)
+    print("Average time taken for each song (in seconds): ", seconds_elapsed/len(copyright_dict))
 
 # next steps: 
-# - paste to excel file (just take first element of list)
+# yup --> - paste to excel file (just take first element of list)
 # - use more complete information of excel sheet (catalog name, artist name, date)
 # - figure out how to seek registration number dynamically within details page of song
 # turn into object-oriented so that things like copyright_dict are global
 # build a web interface, start the process after uploading input file and pressing button 
-# fix 20th century boy Master version (don't split at the beginning right away on "(" if detect Master)
+# yup --> fix 20th century boy Master version (don't split at the beginning right away on "(" if detect Master)
 # if single word keyword song (Holiday, Body), search on more information
 # look up web crawler deepening search techniques / algorithms
