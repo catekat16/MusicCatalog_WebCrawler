@@ -138,7 +138,8 @@ def run_main(input_file):
             #    song_titles.append((row[2]).split("-")[1])
             song_titles.append((index+1,row[2]))
 
-    PATH = "/Users/xiaoyanyang/Desktop/chromedriver"
+    #PATH = "/Users/xiaoyanyang/Desktop/chromedriver"
+    PATH = "./chromedriver"
     driver = webdriver.Chrome(PATH)
     driver.get("https://cocatalog.loc.gov/cgi-bin/Pwebrecon.cgi?DB=local&PAGE=first")
     
